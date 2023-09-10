@@ -1,20 +1,22 @@
 ### Build Stage ###
 FROM activepieces/ap-base:7 AS build
 
-# Copy custom pieces code
-WORKDIR /app/packages 
-COPY ./pieces /app/packages/pieces
+# Clone repo for custom pieces
+RUN git clone https://github.com/kennethmakjw/activepieces.git
+
+# Copy custom pieces  
+WORKDIR /app/activepieces
+COPY packages/pieces /app/packages/pieces
 
 # Build pieces
 RUN npx nx build pieces
 
-# Copy rest of source
+# Copy source from image and build rest
+WORKDIR /app
 COPY . .
-
-# Build 
 RUN npx nx build backend ui-core
 
-### Runtime Stage ###
+### Runtime Stage ### 
 FROM activepieces/ap-base:7 AS runtime
 
 # Install Nginx
@@ -27,12 +29,12 @@ COPY --from=build /app/packages/ /usr/src/app/packages/
 # Nginx config
 COPY packages/ui/core/nginx.conf /etc/nginx/nginx.conf
 
-# Copy UI files
+# Copy UI  
 COPY --from=build /app/dist/packages/ui/core /usr/share/nginx/html
 
-# Entrypoint 
+# Entrypoint
 COPY docker-entrypoint.sh /
-RUN chmod +x /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh  
 ENTRYPOINT ["/docker-entrypoint.sh"]
 
 EXPOSE 80
