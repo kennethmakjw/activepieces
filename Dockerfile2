@@ -1,36 +1,37 @@
 # Build Stage
 FROM node:18.17.1-bullseye AS build
 
-# Install pnpm
-RUN npm install -g pnpm
+# Install pnpm just in case
+RUN npm install -g pnpm 
 
-WORKDIR /app 
+WORKDIR /app
 
-COPY package.json pnpm-lock.json ./
+# Copy entire project
+COPY . . 
 
-RUN pnpm install
-
-COPY . .
-
-# Migrate @nrwl/angular to compatible version 
+# Migrate @nrwl/angular to compatible version
 RUN npx nx migrate @nrwl/angular --to-compatible-versions
+
+# Install dependencies 
+RUN npm ci
 
 # Build projects
 RUN npx nx run-many --target=build --projects=backend,ui-core
 
-# Runtime Stage 
+# Runtime Stage
 FROM ubuntu:22.04 AS runtime
 
 RUN apt-get update && apt-get install -y nginx nodejs
 
-COPY --from=build /app/dist/packages/backend /usr/src/app/dist/packages/backend 
-
+# Copy build artifacts
+COPY --from=build /app/dist/packages/backend /usr/src/app/dist/packages/backend
 COPY --from=build /app/dist/packages/ui/core /usr/share/nginx/html
 
+# Nginx config 
 COPY packages/ui/core/nginx.conf /etc/nginx/nginx.conf
 
+# Entrypoint script
 COPY docker-entrypoint.sh /
-
 RUN chmod +x /docker-entrypoint.sh
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
