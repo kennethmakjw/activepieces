@@ -9,15 +9,16 @@ COPY . .
 
 RUN rm package-lock.json
 
-RUN npm install || npm install 
+RUN npm install || npm install
 RUN npm install --force
 
-RUN npx nx migrate --to-compatible-versions
+# Migrate @nrwl/angular to compatible version
+RUN npx nx migrate @nrwl/angular --to-compatible-versions
 
 RUN npx nx run-many --target=build --projects=backend,ui-core
 
 # Runtime Stage
-FROM ubuntu:22.04 AS runtime  
+FROM ubuntu:22.04 AS runtime 
 
 RUN apt-get update && apt-get install -y nginx nodejs
 
