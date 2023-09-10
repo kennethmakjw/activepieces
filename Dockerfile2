@@ -1,4 +1,4 @@
-# Install Node.js
+# Build Stage
 FROM node:18.17.1-bullseye AS build
 
 # Install nx CLI globally
@@ -22,8 +22,8 @@ RUN npx nx run-many --target=build --projects=backend,ui-core
 # Runtime image
 FROM ubuntu:22.04 AS runtime
 
-# Install nginx
-RUN apt-get update && apt-get install -y nginx
+# Install nginx and utilities for debugging
+RUN apt-get update && apt-get install -y nginx curl wget
 
 # Copy build output
 COPY --from=build /app/dist/packages/backend /usr/src/app/dist/packages/backend  
@@ -32,11 +32,11 @@ COPY --from=build /app/dist/packages/ui/core /usr/share/nginx/html
 # Nginx config
 COPY packages/ui/core/nginx.conf /etc/nginx/nginx.conf  
 
-# Entrypoint script
+# Entrypoint script for debugging
 COPY docker-entrypoint.sh /
 RUN chmod +x /docker-entrypoint.sh
 
-# Start Nginx
+# Start Nginx and add debugging commands
 ENTRYPOINT ["/docker-entrypoint.sh"]  
 
 EXPOSE 80
