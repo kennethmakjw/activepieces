@@ -7,7 +7,8 @@ export const linkedinAuth = PieceAuth.OAuth2({
     authUrl: 'https://www.linkedin.com/oauth/v2/authorization',
     tokenUrl: 'https://www.linkedin.com/oauth/v2/accessToken',
     required: true,
-    scope: ['w_member_social', 'w_organization_social', 'rw_organization_admin', 'openid', 'email', 'profile']
+    scope: ['w_member_social', 'openid', 'email', 'profile']
+    //w_organization_social and rw_organization_admin temporarily disabled until granted permission by linkedin
 })
 
 export const linkedin = createPiece({
