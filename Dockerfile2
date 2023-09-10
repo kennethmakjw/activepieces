@@ -1,8 +1,8 @@
 ### Build Stage ###
 FROM node:18.17.1-bullseye AS build
 
-# Copy default.cf
-COPY packages/backend/src/assets/default.cf /usr/local/etc/isolate 
+# Copy default.cf 
+COPY packages/backend/src/assets/default.cf /usr/local/etc/isolate
 
 # Install dependencies
 RUN apt-get update \
@@ -10,41 +10,34 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 
 # Set locale
-ENV LANG en_US.UTF-8
+ENV LANG en_US.UTF-8  
 ENV LANGUAGE en_US:en
 ENV LC_ALL en_US.UTF-8
 
-# Install global dependencies
+# Install global dependencies  
 RUN npm i -g npm@9.3.1 pnpm@7.28.0
 RUN pnpm store add @tsconfig/node18 @types/node typescript
 
-# Install app dependencies
+# Build
 WORKDIR /app
-COPY package.json pnpm-lock.yaml ./
-RUN npm ci
-
-# Clone repo and build
-RUN git clone https://github.com/kennethmakjw/activepieces.git
-WORKDIR /app/activepieces
-COPY packages/backend packages/backend
-COPY packages/ui packages/ui
+COPY . .
 RUN npx nx run-many --target=build --projects=backend,ui-core
 
 ### Runtime Stage ###
-FROM ubuntu:22.04
+FROM ubuntu:22.04 AS runtime
 
 RUN apt-get update && apt-get install -y nginx
 
 # Copy artifacts from build stage
-COPY --from=build /app/activepieces/dist/packages/backend /usr/src/app/dist/packages/backend
-COPY --from=build /app/activepieces/dist/packages/ui/core /usr/share/nginx/html
+COPY --from=build /app/dist/packages/backend /usr/src/app/dist/packages/backend
+COPY --from=build /app/dist/packages/ui/core /usr/share/nginx/html
 
-# Nginx config 
+# Nginx config
 COPY packages/ui/core/nginx.conf /etc/nginx/nginx.conf
 
-# Entrypoint
+# Entrypoint 
 COPY docker-entrypoint.sh /
-RUN chmod +x /docker-entrypoint.sh  
-ENTRYPOINT ["/docker-entrypoint.sh"]
+RUN chmod +x /docker-entrypoint.sh
+ENTRYPOINT ["/docker-entrypoint.sh"]  
 
 EXPOSE 80
