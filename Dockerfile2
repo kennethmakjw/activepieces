@@ -1,31 +1,35 @@
-# Build frontend
-FROM activepieces/ap-base:7 AS build-frontend
+# Build Stage
+FROM node:18.17.1-bullseye AS build
+
+# Install global deps
+RUN npm i -g jest@29.5.0
+
 WORKDIR /app
+COPY . .
 
-COPY packages/ui/core/package.json ./ui/core/package.json
-RUN npm install
+RUN rm package-lock.json
 
-COPY packages/ui/core/src/app/linkedin ./ui/core/src/app/linkedin
+RUN npm install || npm install
+RUN npm install --force
 
-COPY packages/ui/core ./ui/core
-RUN npm run build
+# Migrate @nrwl/angular to compatible version
+RUN npx nx migrate @nrwl/angular --to-compatible-versions
 
-# Build backend 
-FROM activepieces/ap-base:7 AS build-backend
-WORKDIR /app
-COPY packages/backend/package.json ./backend/package.json
-RUN npm install --production
-COPY packages/backend ./backend 
-RUN npm run build
+RUN npx nx run-many --target=build --projects=backend,ui-core
 
-# Final stage
-FROM activepieces/ap-base:7
-COPY --from=build-frontend /app/dist /usr/share/nginx/html
-COPY --from=build-backend /app/dist /usr/share/nginx/backend
+# Runtime Stage
+FROM ubuntu:22.04 AS runtime 
 
-# Nginx config
-RUN rm /etc/nginx/conf.d/default.conf
-COPY packages/ui/core/nginx.conf /etc/nginx/conf.d/default.conf
+RUN apt-get update && apt-get install -y nginx nodejs
+
+COPY --from=build /app/dist/packages/backend /usr/src/app/dist/packages/backend
+COPY --from=build /app/dist/packages/ui/core /usr/share/nginx/html
+
+COPY packages/ui/core/nginx.conf /etc/nginx/nginx.conf
+
+COPY docker-entrypoint.sh /
+RUN chmod +x /docker-entrypoint.sh
+
+ENTRYPOINT ["/docker-entrypoint.sh"]
 
 EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
