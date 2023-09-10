@@ -1,7 +1,7 @@
-### Build Stage ###
+# Build Stage
 FROM node:18.17.1-bullseye AS build
 
-# Copy default.cf  
+# Copy default.cf 
 COPY packages/backend/src/assets/default.cf /usr/local/etc/isolate
 
 # Install dependencies
@@ -9,28 +9,29 @@ RUN apt-get update \
   && apt-get install -y --no-install-recommends locales locales-all libcap-dev \
   && rm -rf /var/lib/apt/lists/*
 
-# Set locale
+# Set locale 
 ENV LANG en_US.UTF-8
-ENV LANGUAGE en_US:en
-ENV LC_ALL en_US.UTF-8  
+ENV LANGUAGE en_US:en  
+ENV LC_ALL en_US.UTF-8
 
-# Install global dependencies 
+# Install global dependencies
 RUN npm i -g npm@9.3.1 pnpm@7.28.0
 RUN pnpm store add @tsconfig/node18 @types/node typescript
 
 # Build
-WORKDIR /app 
+WORKDIR /app
 COPY . .
 RUN npm install
 RUN npx nx run-many --target=build --projects=backend,ui-core
 
-### Runtime Stage ###
+# Runtime Stage
 FROM ubuntu:22.04 AS runtime
 
-RUN apt-get update && apt-get install -y nginx 
+# Install Node.js
+RUN apt-get update && apt-get install -y nginx nodejs
 
 # Copy artifacts
-COPY --from=build /app/dist/packages/backend /usr/src/app/dist/packages/backend
+COPY --from=build /app/dist/packages/backend /usr/src/app/dist/packages/backend  
 COPY --from=build /app/dist/packages/ui/core /usr/share/nginx/html
 
 # Nginx config
