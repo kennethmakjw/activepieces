@@ -1,6 +1,9 @@
 # Build Stage
 FROM node:18.17.1-bullseye AS build
 
+# Install nx globally 
+RUN npm install -g @nrwl/cli
+
 # Install pnpm just in case
 RUN npm install -g pnpm 
 
