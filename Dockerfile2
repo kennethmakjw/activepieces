@@ -22,6 +22,8 @@ RUN npx nx run-many --target=build --projects=backend,ui-core
 # Runtime image
 FROM ubuntu:22.04 AS runtime
 
+RUN apt-get update && apt-get install -y nodejs
+
 # Install nginx
 RUN apt-get update && apt-get install -y nginx
 
