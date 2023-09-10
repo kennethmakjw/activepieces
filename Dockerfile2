@@ -1,8 +1,6 @@
 # Build Stage
 FROM node:18.17.1-bullseye AS build
 
-RUN npm install -g @nrwl/cli
-
 WORKDIR /app
 
 COPY package.json ./
@@ -10,26 +8,29 @@ RUN npm install
 
 COPY . .
 
+# Build backend only  
 RUN npx nx build backend
 
-# Debug build output location
-RUN ls -l /app/dist/packages/backend 
+# Check backend build output
+RUN ls -l /app/dist/packages/backend
 
-# Runtime Stage 
-FROM ubuntu:22.04 AS runtime
+# Runtime Stage
+FROM ubuntu:22.04 AS runtime  
 
 RUN apt-get update && apt-get install -y nodejs nginx
 
-# Copy entire /app folder
-COPY --from=build /app /usr/src/app
+# Copy entire /dist folder
+COPY --from=build /app/dist /usr/src/app/dist
 
-# Debug contents
+# Check contents
 RUN ls -l /usr/src/app/dist/packages/backend
 
 COPY packages/ui/core/nginx.conf /etc/nginx/nginx.conf
-COPY docker-entrypoint.sh /
 
-RUN chmod +x /docker-entrypoint.sh
+COPY docker-entrypoint.sh .
+RUN sed -i 's/backend\/main.js/dist\/packages\/backend\/main.js/' docker-entrypoint.sh 
+
+RUN chmod +x docker-entrypoint.sh
 ENTRYPOINT ["/docker-entrypoint.sh"]
 
 EXPOSE 80
