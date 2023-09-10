@@ -2,15 +2,15 @@
 FROM activepieces/ap-base:7 AS build
 
 # Install dependencies
-RUN apt-get update && apt-get install -y nodejs npm
+RUN apt-get update && apt-get install -y nodejs npm  
 RUN npm install -g nx
 
 # Clone repo
 RUN git clone https://github.com/kennethmakjw/activepieces.git
 WORKDIR /app/activepieces
 
-# Copy Nx config from image 
-COPY --from=0 /app/nx.* ./
+# Copy Nx config from base image 
+COPY --from=0 /app/nx.* ./  
 
 # Build pieces
 COPY packages/pieces ./packages/pieces
