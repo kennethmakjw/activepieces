@@ -1,35 +1,38 @@
-# Build Stage
-FROM node:18.17.1-bullseye AS build
+### Build Stage ###
+FROM activepieces/ap-base:7 AS build
 
-# Install global deps
-RUN npm i -g jest@29.5.0
+# Copy custom pieces code
+WORKDIR /app/packages 
+COPY ./pieces /app/packages/pieces
 
-WORKDIR /app
+# Build pieces
+RUN npx nx build pieces
+
+# Copy rest of source
 COPY . .
 
-RUN rm package-lock.json
+# Build 
+RUN npx nx build backend ui-core
 
-RUN npm install || npm install
-RUN npm install --force
+### Runtime Stage ###
+FROM activepieces/ap-base:7 AS runtime
 
-# Migrate @nrwl/angular to compatible version
-RUN npx nx migrate @nrwl/angular --to-compatible-versions
+# Install Nginx
+RUN apt-get update && apt-get install -y nginx
 
-RUN npx nx run-many --target=build --projects=backend,ui-core
+# Copy artifacts from build
+COPY --from=build /app/dist/ /usr/src/app/dist/
+COPY --from=build /app/packages/ /usr/src/app/packages/
 
-# Runtime Stage
-FROM ubuntu:22.04 AS runtime 
-
-RUN apt-get update && apt-get install -y nginx nodejs
-
-COPY --from=build /app/dist/packages/backend /usr/src/app/dist/packages/backend
-COPY --from=build /app/dist/packages/ui/core /usr/share/nginx/html
-
+# Nginx config
 COPY packages/ui/core/nginx.conf /etc/nginx/nginx.conf
 
+# Copy UI files
+COPY --from=build /app/dist/packages/ui/core /usr/share/nginx/html
+
+# Entrypoint 
 COPY docker-entrypoint.sh /
 RUN chmod +x /docker-entrypoint.sh
-
 ENTRYPOINT ["/docker-entrypoint.sh"]
 
 EXPOSE 80
